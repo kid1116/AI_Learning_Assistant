@@ -92,7 +92,7 @@ while True:
         if success:
             print(
                 f"\n已切换到:"
-                f"{memory.get_current_title()}"
+                f"{memory.get_current_session_title()}"
             )
         else:
             print(
@@ -122,10 +122,10 @@ while True:
         # 二次确认
         confirm = input(
             f"\n确定删除「{session['title']}」吗？"
-            "\n输入 yes 确认："
+            "\n输入 y 确认："
         )
 
-        if confirm.lower() == "yes":
+        if confirm.lower() == "y":
             memory.delete_session(
                 session_id
             )
