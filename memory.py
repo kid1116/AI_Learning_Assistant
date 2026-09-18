@@ -110,7 +110,7 @@ class SessionMemory:
         #用户的第一条消息作为session标题
         if(
             role == "user" 
-            and current_session["title"] == "new session" 
+            and current_session["title"] == "New Session" 
         ):
             title = content.strip()[:20]  # 截取前20个字符作为标题
             current_session["title"] = title
