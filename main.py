@@ -51,14 +51,14 @@ print("Input \"/help\" to view available instructions")
 
 while True:
     user_input = input(
-        f"\n[{memory.get_current_session_title()}] You:"
+        f"[{memory.get_current_session_title()}] You:"
     ).strip()
 
     if not user_input:
         continue
 
     if user_input == "/exit":
-        print("AI assistant")
+        print("AI assistant exit")
         break
 
     if user_input == "/help":
@@ -68,6 +68,7 @@ while True:
     if user_input == "/new":
         session_id = memory.create_session()
         print("\n已创建新对话")
+        print(f"session id:{session_id}")
         continue
 
     if user_input == "/history":
@@ -133,7 +134,7 @@ while True:
             )
             print(
                 f"当前会话："
-                f"{memory.get_current_title()}"
+                f"{memory.get_current_session_title()}"
             )
         else:
             print(
@@ -142,7 +143,7 @@ while True:
         continue
 
    
-    history = memory.get_messages()
+    history = memory.get_current_session_messages()
     messages = [
         {
             "role": "system",

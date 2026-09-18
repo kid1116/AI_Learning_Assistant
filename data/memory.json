@@ -1,11 +1,11 @@
 {
-    "current_session_id": "20260918_201759_0d74fc",
+    "current_session_id": "20260918_202904_b28fba",
     "sessions": {
-        "20260918_201759_0d74fc": {
-            "id": "20260918_201759_0d74fc",
-            "title": "new session",
-            "created_at": "2026-09-18T20:17:59+08:00",
-            "updated_at": "2026-09-18T20:17:59+08:00",
+        "20260918_202904_b28fba": {
+            "id": "20260918_202904_b28fba",
+            "title": "New Session",
+            "created_at": "2026-09-18T20:29:04+08:00",
+            "updated_at": "2026-09-18T20:29:04+08:00",
             "messages": []
         }
     }
