@@ -1,39 +1,159 @@
 from llm import ask_llm
 from prompt import SYSTEM_PROMPT
-from memory import load_memory, save_memory, clear_memory
+from memory import SessionMemory
 
+#初始化memory
+memory = SessionMemory()
+def show_help():
+    print("\n========== 命令 ==========")
 
-history = load_memory()
+    print("/new: 新建一个对话")
+    print("/history: 查看所有对话")
+    print("/switch 会话ID: 切换到指定对话")
+    print("/delete 会话ID: 删除指定对话")
+    print("/exit”: 退出程序")
 
-messages = [
-    {
-        "role": "system",
-        "content": SYSTEM_PROMPT
-    }
-]
-messages.extend(history)
+    print("==========================\n")
 
+#显示历史session
+def show_history():
+
+    sessions = memory.list_sessions()
+
+    current_id = memory.get_current_session_id()
+
+    print("\n========== 对话历史 ==========")
+
+    for index, session in enumerate(
+        sessions,
+        start=1
+    ):
+
+        marker = ""
+
+        if session["id"] == current_id:
+            marker = " ← 当前"
+
+        print(
+            f"{index}. "
+            f"{session['title']} "
+            f"[{session['id']}]"
+            f"{marker}"
+        )
+
+    print("==============================\n")
+
+#主程序：
+print(
+    f"\nCurrrent Session:{memory.get_current_session_title()}"
+)
+print("Input \"/help\" to view available instructions")
 
 while True:
+    user_input = input(
+        f"\n[{memory.get_current_session_title()}] You:"
+    ).strip()
 
-    user_input = input("\n你:")
-
-    if user_input == "exit":
-        print("AI助手退出")
-        break
-
-    if user_input == "clear":
-        clear_memory()
-        messages = [
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT
-            }
-        ]
-
-        print("历史聊天记录已清空")
+    if not user_input:
         continue
 
+    if user_input == "/exit":
+        print("AI assistant")
+        break
+
+    if user_input == "/help":
+        show_help()
+        continue
+
+    if user_input == "/new":
+        session_id = memory.create_session()
+        print("\n已创建新对话")
+        continue
+
+    if user_input == "/history":
+        show_history()
+        continue
+
+    #切换session
+    if user_input.startswith("/switch"):
+        parts = user_input.split()
+        if len(parts) != 2:
+            print(
+                "\n用法:/switch 会话ID"
+            )
+            continue
+
+        session_id = parts[1]
+        success = memory.switch_session(
+            session_id
+        )
+
+        if success:
+            print(
+                f"\n已切换到:"
+                f"{memory.get_current_title()}"
+            )
+        else:
+            print(
+                "\n找不到这个 Session。"
+            )
+        continue
+
+    #删除session
+    if user_input.startswith("/delete"):
+        parts = user_input.split()
+        if len(parts) != 2:
+            print(
+                "\n用法:/delete 会话ID"
+            )
+            continue
+
+        session_id = parts[1]
+        # 找不到 Session
+        if session_id not in memory.data["sessions"]:
+            print(
+                "\n找不到这个 Session。"
+            )
+            continue
+
+        session = memory.data["sessions"][session_id]
+
+        # 二次确认
+        confirm = input(
+            f"\n确定删除「{session['title']}」吗？"
+            "\n输入 yes 确认："
+        )
+
+        if confirm.lower() == "yes":
+            memory.delete_session(
+                session_id
+            )
+            print(
+                "\nSession 已删除。"
+            )
+            print(
+                f"当前会话："
+                f"{memory.get_current_title()}"
+            )
+        else:
+            print(
+                "\n已取消删除。"
+            )
+        continue
+
+   
+    history = memory.get_messages()
+    messages = [
+        {
+            "role": "system",
+            "content": SYSTEM_PROMPT
+        }
+    ]
+
+    # 添加当前 Session 历史
+    messages.extend(history)
+
+    # 添加本次用户问题
     messages.append(
         {
             "role": "user",
@@ -43,14 +163,15 @@ while True:
 
     answer = ask_llm(messages)
 
-    print("\nAI助手:")
+    print("\nAI assistant:")
     print(answer)
 
-    messages.append(
-        {
-            "role": "assistant",
-            "content": answer
-        }
-    )
+    memory.add_message(
+            "user",
+            user_input
+        )
 
-    save_memory(messages[1:])  # 保存历史聊天记录
+    memory.add_message(
+            "assistant",
+            answer
+        )
