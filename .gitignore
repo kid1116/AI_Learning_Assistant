@@ -1,3 +1,4 @@
+#.gitignore文件仅对未跟踪的文件有效，已经上传到github的文件即使ignore也会继续跟踪上传
 .env
 venv/
 __pycache__/
