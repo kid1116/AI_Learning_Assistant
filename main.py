@@ -1,9 +1,12 @@
 from llm import ask_llm
 from prompt import SYSTEM_PROMPT
 from memory import SessionMemory
+from long_term_memory import (LongTermMemory,extract_memories)
 
 #初始化memory
-memory = SessionMemory()
+session_memory = SessionMemory()
+Long_term_memory = LongTermMemory()
+
 def show_help():
     print("\n========== 命令 ==========")
 
@@ -11,6 +14,8 @@ def show_help():
     print("/history: 查看所有对话")
     print("/switch 会话ID: 切换到指定对话")
     print("/delete 会话ID: 删除指定对话")
+    print("/memory: 查看长期记忆")
+    print("/forget <Memory ID>: 删除指定长期记忆")
     print("/exit”: 退出程序")
 
     print("==========================\n")
@@ -18,9 +23,9 @@ def show_help():
 #显示历史session
 def show_history():
 
-    sessions = memory.list_sessions()
+    sessions = session_memory.list_sessions()
 
-    current_id = memory.get_current_session_id()
+    current_id = session_memory.get_current_session_id()
 
     print("\n========== 对话历史 ==========")
 
@@ -42,6 +47,22 @@ def show_history():
         )
 
     print("==============================\n")
+
+#查看长期记忆
+def show_memory():
+    memories = (Long_term_memory.get_memories())
+
+    print("\n===== Long-term Memory =====")
+
+    if not memories:
+        print("not exist long-term memory")
+
+    else:
+        for index,memory_item in enumerate(memories,start=1):
+            print(
+                
+            )
+
 
 #主程序：
 print(
