@@ -110,6 +110,7 @@ class LongTermMemory:
 
     #利用AI自动提取长期记忆
     def extract_memories(user_input,existing_memories):
+        lines = []
         existing_memory_text = json.dumps(
             existing_memories,
             ensure_ascii=False,
