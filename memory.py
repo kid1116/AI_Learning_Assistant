@@ -3,10 +3,10 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-# 当前项目目录
+# 获取当前项目目录
 BASE_DIR = Path(__file__).parent
 
-# 记忆文件
+# 拼接完整目录
 MEMORY_FILE = BASE_DIR / "data" / "memory.json"
 
 #session memory

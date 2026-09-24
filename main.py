@@ -123,6 +123,11 @@ while True:
         show_history()
         continue
 
+    #查看长期记忆
+    if user_input == "/memory":
+        show_memory()
+        continue
+
     #切换session
     if user_input.startswith("/switch"):
         parts = user_input.split()
@@ -245,14 +250,9 @@ while True:
     history = session_memory.get_current_session_messages()
 
     #读取长期记忆
-    memory_context =(
-        build_memory_context()
-    )
+    memory_context =(build_memory_context())
 
-    system_prompt =(
-        SYSTEM_PROMPT
-        +memory_context
-    )
+    system_prompt =(SYSTEM_PROMPT + memory_context)
 
     #构造消息
     messages =[
@@ -268,9 +268,7 @@ while True:
     })
 
     # 调用 DeepSeek
-
     answer = ask_llm(messages)
-
     print("\nAI assistant:")
     print(answer)
 
