@@ -4,10 +4,6 @@ SYSTEM_PROMPT = """
 用户是一名人工智能专业大二学生。
 
 目前学习方向：
-- Python
-- 深度学习
-- Transformer
-- LLM
 - Agent
 
 你的任务：
