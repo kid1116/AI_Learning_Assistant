@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).parent
 
 LONG_TERM_MEMORY_FILE = BASE_DIR / "data" / "long_term_memory.json"
 
-#extract_memories 允许的记忆分类，与提示词里的 category 说明保持一致
+#extract_memories 允许的记忆分类
 ALLOWED_CATEGORIES = {
     "profile",
     "goal",

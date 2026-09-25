@@ -269,6 +269,11 @@ while True:
 
     # 调用 DeepSeek
     answer = ask_llm(messages)
+
+    if answer is None:
+        print("AI 服务不可用")
+        continue
+    
     print("\nAI assistant:")
     print(answer)
 
