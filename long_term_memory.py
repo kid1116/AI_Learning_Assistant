@@ -1,4 +1,6 @@
 import json
+import os
+import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -78,17 +80,26 @@ class LongTermMemory:
             exist_ok=True
         )
 
-        with open(
-            LONG_TERM_MEMORY_FILE,
-            "w",
-            encoding="utf-8"
-        ) as f:
-            json.dump(
-                self.data,
-                f,
-                ensure_ascii=False,
-                indent=4
-            )
+        #先写临时文件再原子替换，避免写入中途出错留下残缺的 JSON
+        fd, tmp_path = tempfile.mkstemp(
+            dir=LONG_TERM_MEMORY_FILE.parent,
+            suffix=".tmp"
+        )
+
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(
+                    self.data,
+                    f,
+                    ensure_ascii=False,
+                    indent=4
+                )
+
+            os.replace(tmp_path, LONG_TERM_MEMORY_FILE)
+
+        except BaseException:
+            os.unlink(tmp_path)
+            raise
 
     #获取所有长期记忆
     def get_memories(self):
@@ -221,8 +232,12 @@ other
 
         response = ask_llm(messages)
 
+        #ask_llm 返回的是 message 对象，调用失败时返回 None
+        if response is None:
+            return []
+
         #去掉首尾空白，并剥掉模型可能加上的 ``` 代码块
-        response = response.strip()
+        response = response.content.strip()
         response = strip_code_fence(response)
 
         result = json.loads(response)

@@ -6,15 +6,15 @@ client = OpenAI(
     base_url="https://api.deepseek.com"
 )
 
-def ask_llm(messages):
-
+def ask_llm(messages,tools=None):
     try:
         response = client.chat.completions.create(
             model="deepseek-flash",
-            messages=messages
+            messages=messages,
+            tools=tools
         )
 
-        return response.choices[0].message.content
+        return response.choices[0].message
 
     except Exception as e:
         print(f"LLM调用失败:{e}")

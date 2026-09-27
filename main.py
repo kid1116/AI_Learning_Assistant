@@ -16,7 +16,7 @@ def show_help():
     print("/delete 会话ID: 删除指定对话")
     print("/memory: 查看长期记忆")
     print("/forget <Memory ID>: 删除指定长期记忆")
-    print("/exit”: 退出程序")
+    print("/exit: 退出程序")
 
     print("==========================\n")
 
@@ -273,9 +273,13 @@ while True:
     if answer is None:
         print("AI 服务不可用")
         continue
-    
+
+    # ask_llm 返回的是 message 对象（为了后续支持 tool_calls），
+    # 这里只取文本内容
+    answer_text = answer.content
+
     print("\nAI assistant:")
-    print(answer)
+    print(answer_text)
 
     # 保存当前 Session
     session_memory.add_message(
@@ -285,7 +289,7 @@ while True:
 
     session_memory.add_message(
         "assistant",
-        answer
+        answer_text
     )
 
     # 提取 Long-term Memory

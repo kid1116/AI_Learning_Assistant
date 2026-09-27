@@ -1,4 +1,6 @@
 import json
+import os
+import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -49,10 +51,22 @@ class SessionMemory:
 
     #保存"memory.json"文件
     def save(self):
+        # 先写临时文件再原子替换，避免写入中途出错留下残缺的 JSON
         MEMORY_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(self.data, f, ensure_ascii=False, indent=4)
+        fd, tmp_path = tempfile.mkstemp(
+            dir=MEMORY_FILE.parent, suffix=".tmp"
+        )
+
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(self.data, f, ensure_ascii=False, indent=4)
+
+            os.replace(tmp_path, MEMORY_FILE)
+
+        except BaseException:
+            os.unlink(tmp_path)
+            raise
 
     #创建新的会话
     def create_session(self,title="New Session"):
