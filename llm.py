@@ -14,7 +14,7 @@ def ask_llm(messages,tools=None):
             tools=tools
         )
 
-        return response.choices[0].message
+        return response.choices[0].message #返回整个message对象
 
     except Exception as e:
         print(f"LLM调用失败:{e}")
