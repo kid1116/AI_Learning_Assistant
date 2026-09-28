@@ -26,8 +26,12 @@ V1.0  个人AI第二大脑
 
 代码结构：<br>
 config->读取Deepseek api_key <br>
+executor->调用所需的tool <br>
 llm->选择Deepseek模型 <br>
+long_term_memory->利用Deepseek总结长期记忆 <br>
 prompt->个性化提示词 <br>
 memory->管理对话记忆 <br>
-long_term_memory->利用Deepseek总结长期记忆 <br>
 main->程序执行入口 <br>
+data/->存储对话记忆及长期记忆 <br>
+test/->进行功能模块的测试 <br>
+tools/->管理llm agent的tool <br>

@@ -2,6 +2,7 @@ from llm import ask_llm
 from prompt import SYSTEM_PROMPT
 from memory import SessionMemory
 from long_term_memory import LongTermMemory
+from executor import execute_tool
 
 #初始化memory
 session_memory = SessionMemory()
