@@ -1,8 +1,7 @@
-from llm import ask_llm
 from prompt import SYSTEM_PROMPT
 from memory import SessionMemory
 from long_term_memory import LongTermMemory
-from executor import execute_tool
+from agent import run_agent
 
 #初始化memory
 session_memory = SessionMemory()
@@ -268,16 +267,12 @@ while True:
         "content": user_input
     })
 
-    # 调用 DeepSeek
-    answer = ask_llm(messages)
+    # 交给 Agent 循环：模型可自主调用工具，并基于工具结果作答
+    answer_text = run_agent(messages)
 
-    if answer is None:
+    if answer_text is None:
         print("AI 服务不可用")
         continue
-
-    # ask_llm 返回的是 message 对象（为了后续支持 tool_calls），
-    # 这里只取文本内容
-    answer_text = answer.content
 
     print("\nAI assistant:")
     print(answer_text)
