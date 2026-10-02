@@ -25,6 +25,7 @@ V1.0  个人AI第二大脑
 
 
 代码结构：<br>
+agent->将tool实际接入对话循环 <br>
 config->读取Deepseek api_key <br>
 executor->调用所需的tool <br>
 llm->选择Deepseek模型 <br>

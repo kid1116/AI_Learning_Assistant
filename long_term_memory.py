@@ -40,6 +40,21 @@ def strip_code_fence(text):
     return "\n".join(lines)
 
 
+#模型有时会在 JSON 前后加一句解释，这里把第一个 [ 到最后一个 ] 之间的内容切出来
+def extract_json_array(text):
+    start = text.find("[")
+
+    if start == -1:
+        return None
+
+    end = text.rfind("]")
+
+    if end < start:
+        return None
+
+    return text[start:end + 1]
+
+
 class LongTermMemory:
     def __init__(self):
         self.data = self.load()
@@ -237,10 +252,26 @@ other
             return []
 
         #去掉首尾空白，并剥掉模型可能加上的 ``` 代码块
-        response = response.content.strip()
-        response = strip_code_fence(response)
+        #模型偶尔只返回工具调用、content 为 None，这里直接当没有记忆处理
+        response = (response.content or "").strip()
+        response = strip_code_fence(response).strip()
 
-        result = json.loads(response)
+        #模型不保证一定输出合法 JSON，解析失败就当作没有可保存的记忆，不能让程序崩
+        try:
+            result = json.loads(response)
+
+        except json.JSONDecodeError:
+            #再试一次：退一步只取其中的 JSON 数组
+            json_text = extract_json_array(response)
+
+            if json_text is None:
+                return []
+
+            try:
+                result = json.loads(json_text)
+
+            except json.JSONDecodeError:
+                return []
 
         if not isinstance(result, list):
             return []

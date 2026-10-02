@@ -5,11 +5,61 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+from llm import ask_llm
+
 # 获取当前项目目录
 BASE_DIR = Path(__file__).parent
 
 # 拼接完整目录
 MEMORY_FILE = BASE_DIR / "data" / "memory.json"
+
+# 会话标题的长度上限，防止模型不听话时把标题写太长
+MAX_TITLE_LENGTH = 24
+
+
+# 清洗模型生成的标题：去掉换行和首尾引号，并限制长度
+def clean_title(text):
+    title = " ".join((text or "").split()).strip()
+
+    # 模型偶尔会用引号或书名号把标题包起来
+    title = title.strip('"\'“”‘’《》【】[]')
+
+    return title[:MAX_TITLE_LENGTH].strip()
+
+
+# 让模型把用户的第一句话概括成简短标题
+# 调用失败或结果为空时返回 None，由调用方回退到截断文案
+def generate_title(user_input):
+    prompt = (
+        "请把下面这句话概括成一个简短的中文标题，用来标识一段对话。\n\n"
+        "要求：\n"
+        "1. 不超过 20 个字\n"
+        "2. 直接输出标题本身，不要引号、不要句号、不要任何解释\n"
+        "3. 保留关键的专有名词(比如 Agent、RAG、Transformer)\n\n"
+        f"用户的话：{user_input}"
+    )
+
+    messages = [
+        {
+            "role": "system",
+            "content": "你负责为对话生成简短标题，只输出标题本身。"
+        },
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ]
+
+    response = ask_llm(messages)
+
+    # ask_llm 返回的是 message 对象，调用失败时返回 None
+    if response is None:
+        return None
+
+    title = clean_title(response.content)
+
+    return title or None
+
 
 #session memory
 class SessionMemory:
@@ -126,8 +176,16 @@ class SessionMemory:
             role == "user" 
             and current_session["title"] == "New Session" 
         ):
-            title = content.strip()[:20]  # 截取前20个字符作为标题
-            current_session["title"] = title
+            #优先让模型概括，失败或超时则回退到截取前20个字符
+            text = (content or "").strip()
+
+            title = ""
+
+            if text:
+                #这里再清洗一次：无论模型层返回什么，进入存储前都保证是干净且不超长的标题
+                title = clean_title(generate_title(text))
+
+            current_session["title"] = title or text[:20]
 
         self.save()
 
