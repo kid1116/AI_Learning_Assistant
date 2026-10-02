@@ -1,2 +1,27 @@
 值得后续改进的点：
-1. "memory.py" 中add_message方法为自动截断前20个字符作为标题，应该改进为高度概括提问内容为标题。
+
+已完成（记录备查）：
+1. [完成] 会话标题改为 AI 概括。memory.py 新增 generate_title / clean_title，
+   失败时自动回退到「截取前 20 字」，模型不可用不影响程序。
+   测试：test/test_session_title.py（13 个用例）+ test/test_title_live.py（真实调用）
+2. [完成] long_term_memory.py 的 json.loads 加异常兜底，模型返回非 JSON 不再崩程序。
+   测试：test/test_extract_memories.py（5 个用例）
+3. [完成] tools/calculator.py 用 AST 白名单替换 eval，杜绝表达式注入执行任意代码；
+   并加上幂运算规模上限，挡住 9**9**9 这类内存炸弹。
+   测试：test/test_calculator.py（11 个用例）
+4. [完成] prompt.py 去掉与长期记忆重复的个人信息，统一由长期记忆注入，避免两处不一致。
+5. [完成] test/ 目录改造成可批量运行的测试套件，不再被 .gitignore 忽略。
+   跑法：python test/run_all.py（零依赖；将来装了 pytest 也可直接 pytest test）
+
+待改进（按优先级）：
+1. main.py 缺少 if __name__ == "__main__" 保护：整个 REPL 写在模块顶层，
+   导致 import main 会直接开始交互（并在无输入时抛 EOFError），
+   没法被测试或复用。建议把流程收进 main() / chat_loop() 函数。
+2. 上下文会无限增长。main.py 每轮都把「当前会话全部历史」塞进 prompt，
+   memory.json 只增不减，迟早撞上下文上限。需要加窗口截断或历史摘要。
+3. memory.json 里的历史回复全文很长（单条几千字），可以考虑存摘要而不是全文。
+4. agent.py 的 MAX_STEPS=5 用完后返回一句固定文案，可以考虑把「已尝试过的工具调用」
+   回传给模型，让它给用户一个更有用的交代。
+5. web_search 的返回内容没有做总长度控制，只截断了单条摘要（500 字），
+   结果条数多时仍可能把上下文撑大。
+6. 长期记忆提取每轮都会额外调用一次模型，可以考虑合并到主对话或做缓存/去抖。

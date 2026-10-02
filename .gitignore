@@ -3,4 +3,5 @@
 venv/
 __pycache__/
 data/
-test/
+
+# 测试代码现在纳入版本管理（test/ 不再忽略）
