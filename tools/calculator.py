@@ -115,6 +115,11 @@ def _eval_node(node, depth=0):
         function = ALLOWED_FUNCTIONS[node.func.id]
         args = [_eval_node(arg, depth + 1) for arg in node.args]
 
+        # pow(a, b) 与 a**b 必须遵守同一规模限制，不能从函数调用绕过。
+        # 三参数 pow(a, b, mod) 使用模幂，不会构造完整的 a**b。
+        if node.func.id == "pow" and len(args) == 2:
+            _check_power_size(*args)
+
         return function(*args)
 
     if isinstance(node, ast.UnaryOp):

@@ -38,6 +38,8 @@ web_search_schema = {
                 },
                 "count": {
                     "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10,
                     "description": "返回结果条数，1-10，默认 5"
                 }
             },

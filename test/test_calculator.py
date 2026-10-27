@@ -140,6 +140,12 @@ def test_power_bomb_is_rejected():
     assert calculator("2**1000") == 2 ** 1000
 
 
+def test_pow_function_cannot_bypass_power_limit():
+    assert calculator("pow(10, 100000000)").startswith("计算失败：")
+    assert calculator("pow(2, 10)") == 1024
+    assert calculator("pow(2, 100000000, 7)") == pow(2, 100000000, 7)
+
+
 def test_long_expression_is_rejected():
     assert calculator("1+" * 200 + "1").startswith("计算失败：表达式过长")
     # 200 字符上限刚好挡住 99 层括号

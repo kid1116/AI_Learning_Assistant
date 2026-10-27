@@ -189,6 +189,26 @@ class SessionMemory:
 
         self.save()
 
+    def add_turn(self, user_input, answer):
+        """一轮问答一次落盘，保存失败时恢复内存状态。"""
+        current_session = self.get_current_session()
+        title = current_session["title"]
+        if title == "New Session":
+            text = user_input.strip()
+            title = clean_title(generate_title(text)) or text[:20]
+        previous = {**current_session, "messages": list(current_session["messages"])}
+        current_session["title"] = title
+        current_session["messages"].extend([
+            {"role": "user", "content": user_input},
+            {"role": "assistant", "content": answer},
+        ])
+        current_session["updated_at"] = self.now()
+        try:
+            self.save()
+        except Exception:
+            self.data["sessions"][current_session["id"]] = previous
+            raise
+
     #切换session
     def switch_session(self, session_id):
         if session_id in self.data["sessions"]:

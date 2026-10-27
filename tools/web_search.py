@@ -12,6 +12,11 @@ MAX_SUMMARY_CHARS = 500
 
 def web_search(query, count=5):
     """博查 Web Search：返回前 count 条结果的 标题 / 链接 / 摘要 文本。"""
+    if not isinstance(query, str) or not query.strip():
+        return "搜索失败：query 必须是非空字符串"
+    if isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= 10:
+        return "搜索失败：count 必须是 1 到 10 的整数"
+
     if not BOCHA_API_KEY:
         return "联网搜索不可用：未配置 BOCHA_API_KEY"
 
