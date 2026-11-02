@@ -16,6 +16,28 @@ class Memories:
         return []
 
 
+def test_input_and_send_button_remain_visible_when_window_is_small():
+    with tempfile.TemporaryDirectory() as folder, \
+         patch.object(memory, "MEMORY_FILE", Path(folder) / "memory.json"), \
+         patch("desktop.load_settings", return_value=DEFAULTS.copy()):
+        root = tk.Tk()
+        window = ChatWindow(root, memory.SessionMemory(), Memories())
+        try:
+            for size in (12, 20):
+                window.settings["size"] = size
+                window.apply_theme()
+                root.geometry("850x620")
+                root.update()
+                for widget in (window.composer, window.send_button):
+                    assert widget.winfo_viewable(), f"{widget} 被历史区域挤出窗口"
+                    bottom = widget.winfo_rooty() + widget.winfo_height()
+                    assert bottom <= root.winfo_rooty() + root.winfo_height()
+                assert window.composer.winfo_height() >= 60
+        finally:
+            root.after_cancel(window.poll_id)
+            root.destroy()
+
+
 def test_desktop_send_success_and_failure_restores_draft():
     with tempfile.TemporaryDirectory() as folder, \
          patch.object(memory, "MEMORY_FILE", Path(folder) / "memory.json"), \

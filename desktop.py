@@ -9,6 +9,7 @@ from chat import ChatService
 from config import MAX_USER_INPUT_CHARS
 from long_term_memory import LongTermMemory
 from memory import SessionMemory
+from markdown_view import MarkdownView
 
 
 class ChatWindow:
@@ -47,34 +48,44 @@ class ChatWindow:
 
         self.main_panel = self.frame(root, padx=30, pady=24)
         self.main_panel.grid(row=0, column=1, sticky="nsew")
+        # 只有历史记录行可伸缩；输入区优先保留，不被 Text 默认高度挤出窗口。
+        self.main_panel.columnconfigure(0, weight=1)
+        self.main_panel.rowconfigure(2, weight=1)
         self.title = self.label(self.main_panel, "", bold=True)
-        self.title.pack(anchor="w")
-        self.label(self.main_panel, "从一个问题开始，慢慢建立自己的知识世界。", muted=True).pack(anchor="w", pady=(6, 16))
+        self.title.grid(row=0, column=0, sticky="w")
+        self.label(self.main_panel, "从一个问题开始，慢慢建立自己的知识世界。", muted=True).grid(row=1, column=0, sticky="w", pady=(6, 16))
         chat_frame = self.frame(self.main_panel)
-        chat_frame.pack(fill="both", expand=True)
-        self.transcript = tk.Text(chat_frame, wrap="word", bd=0, padx=20, pady=20,
+        chat_frame.grid(row=2, column=0, sticky="nsew")
+        self.transcript = tk.Text(chat_frame, wrap="word", height=1, width=1, bd=0, padx=20, pady=20,
                                   highlightthickness=0, state="disabled", cursor="arrow")
         self.transcript.pack(side="left", fill="both", expand=True)
+        self.markdown = MarkdownView(self.transcript)
         scrollbar = ttk.Scrollbar(chat_frame, command=self.transcript.yview)
         scrollbar.pack(side="right", fill="y")
         self.transcript.configure(yscrollcommand=scrollbar.set)
         self.status = self.label(self.main_panel, "就绪", muted=True)
-        self.status.pack(anchor="w", pady=(12, 8))
+        self.status.grid(row=3, column=0, sticky="w", pady=(12, 8))
         self.composer = tk.Text(self.main_panel, height=4, wrap="word", bd=0,
                                 padx=16, pady=12, highlightthickness=1, undo=True)
-        self.composer.pack(fill="x")
+        self.composer.grid(row=4, column=0, sticky="ew")
         self.composer.bind("<Return>", self.on_enter)
         self.composer.bind("<Control-Return>", lambda event: self.send())
         footer = self.frame(self.main_panel)
-        footer.pack(fill="x", pady=(10, 0))
+        footer.grid(row=5, column=0, sticky="ew", pady=(10, 0))
         self.send_button = self.button(footer, "发送  ↗", self.send, primary=True)
         self.send_button.pack(side="right")
         self.label(footer, "Enter 发送 · Shift+Enter 换行", muted=True).pack(side="left")
         self.apply_theme()
         self.refresh_sessions()
         self.render_history()
-        self.composer.focus_set()
+        # 正式入口会先 withdraw 再 deiconify；在映射之后设置焦点才有效。
+        root.bind("<Map>", self.on_map, add="+")
+        self.root.after_idle(self.composer.focus_set)
         self.poll_id = root.after(100, self.poll_events)
+
+    def on_map(self, event):
+        if event.widget is self.root:
+            self.root.after_idle(self.composer.focus_set)
 
     def frame(self, parent, role="bg", **kwargs):
         widget = tk.Frame(parent, **kwargs)
@@ -133,6 +144,7 @@ class ChatWindow:
         self.transcript.tag_configure("user", foreground=accent, font=(family, size, "bold"))
         self.transcript.tag_configure("assistant", foreground=palette["text"], font=(family, size, "bold"))
         self.transcript.tag_configure("note", foreground=palette["muted"])
+        self.markdown.configure(family, size, palette, accent)
 
     def refresh_sessions(self):
         items = self.sessions.list_sessions()
@@ -151,13 +163,17 @@ class ChatWindow:
         self.transcript.configure(state="normal")
         names = {"user": "你", "assistant": "学习助手", "note": "提示"}
         self.transcript.insert("end", names.get(role, role) + "\n", role)
-        self.transcript.insert("end", content + "\n\n")
+        if role == "assistant":
+            self.markdown.insert(content)
+        else:
+            self.transcript.insert("end", content + "\n\n")
         self.transcript.configure(state="disabled")
         self.transcript.see("end")
 
     def render_history(self):
         self.transcript.configure(state="normal")
         self.transcript.delete("1.0", "end")
+        self.markdown.clear_links()
         self.transcript.configure(state="disabled")
         messages = self.sessions.get_current_session_messages()
         if not messages:
