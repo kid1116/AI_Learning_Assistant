@@ -1,6 +1,6 @@
 # 个人 AI 学习助手
 
-一个通过 DeepSeek 提供回答、长期记忆和工具调用的 Python 命令行助手。
+一个通过 DeepSeek 提供回答、长期记忆和工具调用的个人 AI 学习助手，支持独立桌面窗口和命令行两种入口。
 
 ## 桌面对话窗口（Windows）
 
@@ -58,20 +58,77 @@ requirements.txt 固定的是本项目当前虚拟环境中已安装的直接依
 /memory、/forget 记忆ID、/exit。删除操作保留二次确认。
 Ctrl+C 或输入结束均可退出。
 
-## 结构
+## 项目结构
 
-- main.py：命令行交互与命令分发，导入时不启动程序或创建会话。
-- chat.py：ChatService 组织一轮问答、整轮保存和长期记忆提取。
-- context.py：系统提示词、长期记忆和最近完整问答的上下文组装。
-- agent.py：模型与工具之间的循环，最多 5 次带工具的模型请求；耗尽后额外请求一次无工具总结。
-- llm.py：模型客户端按需初始化，单次请求超时 60 秒，最多重试 1 次；整体耗时可能更长。
-- config.py：项目目录下的环境变量、模型配置与上下文预算。
-- memory.py：多会话 JSON 存储及标题生成，add_turn 一次提交整轮问答。
-- long_term_memory.py：跨会话的用户资料提取、去重和存储。
-- prompt.py：助手的系统提示词。
-- executor.py、tools/：工具分发、参数说明、计算器与联网搜索。
-- data/：原有会话和长期记忆文件，数据格式保持兼容。
-- test/：离线回归测试，真实 API 测试默认跳过。
+```text
+AI_Learning_Assistant/
+├── 启动助手.vbs                 Windows 双击启动入口，不显示终端
+├── desktop.py                   桌面窗口、会话操作与后台请求结果展示
+├── appearance.py                主题、强调色、字体与字号的校验和保存
+├── markdown_view.py             助手回复的轻量 Markdown 渲染
+├── main.py                      命令行入口与命令分发
+├── chat.py                      ChatService：单轮问答、保存和记忆提取编排
+├── context.py                   系统提示词、长期记忆与历史窗口组装
+├── agent.py                     模型请求与工具调用循环
+├── llm.py                       DeepSeek 客户端与模型请求封装
+├── executor.py                  解析工具参数、分发调用并返回错误信息
+├── memory.py                    会话管理、标题生成与完整问答持久化
+├── long_term_memory.py          长期记忆提取、去重、存储和删除
+├── prompt.py                    学习助手系统提示词
+├── config.py                    环境变量、模型配置和上下文预算
+├── tools/
+│   ├── __init__.py              工具函数注册表
+│   ├── schemas.py               提供给模型的工具说明和参数定义
+│   ├── calculator.py            基于 AST 白名单的数学计算器
+│   └── web_search.py            博查联网搜索工具
+├── data/                        本地运行数据，文件按需生成
+│   ├── memory.json              会话、消息、标题与当前会话 ID
+│   ├── long_term_memory.json    跨会话的用户长期记忆
+│   ├── appearance.json          桌面外观偏好
+│   └── desktop.lock             防止桌面程序重复启动的锁文件
+├── test/
+│   ├── run_all.py               测试运行器，默认跳过真实 API 测试
+│   ├── conftest.py              pytest 的模块导入路径配置
+│   ├── desktop_preview.py       使用临时会话和模拟回答的界面预览
+│   ├── test_agent.py            工具循环与停止条件测试
+│   ├── test_appearance.py       外观校验、保存与恢复测试
+│   ├── test_calculator.py       计算正确性与表达式边界测试
+│   ├── test_chat.py             单轮对话与失败处理测试
+│   ├── test_context.py          历史裁剪与上下文预算测试
+│   ├── test_desktop.py          输入布局、发送与失败恢复测试
+│   ├── test_entrypoint.py       入口导入、命令与问答保存测试
+│   ├── test_executor.py         工具分发和异常处理测试
+│   ├── test_extract_memories.py 长期记忆提取结果解析测试
+│   ├── test_markdown_view.py    Markdown 文本与 Tk 样式测试
+│   ├── test_session_title.py    会话标题生成与回退测试
+│   ├── test_web_search.py       搜索参数校验测试
+│   ├── test_title_live.py       标题生成真实 API 测试（默认跳过）
+│   └── test_tool_call.py        模型工具调用真实 API 测试（默认跳过）
+├── .env.example                 环境变量配置示例
+├── .env                         本地密钥配置，不提交到版本库
+├── .gitignore                   版本控制忽略规则
+├── requirements.txt             Python 直接依赖版本
+├── README.md                    项目说明与使用方法
+└── ROADMAP.md                   后续功能与实现路线
+```
+
+上面省略了 `.git/`、本地虚拟环境 `venv/` 和 Python 自动生成的 `__pycache__/`。
+`data/` 与 `.env` 属于本地数据，不纳入版本控制；界面预览仅使用临时对话，但保存外观时仍会更新外观配置。
+
+桌面入口和命令行入口共用同一套对话服务，主要调用关系如下：
+
+```text
+启动助手.vbs → desktop.py ─┐
+                          ├→ chat.py → context.py → agent.py → llm.py
+               main.py ───┘                          │
+                                                     └→ executor.py → tools/
+
+chat.py → memory.py / long_term_memory.py → data/
+desktop.py → appearance.py / markdown_view.py
+```
+
+`ChatService` 先构造上下文，再运行模型与工具循环，随后保存整轮问答并提取长期记忆。
+桌面窗口在后台线程调用这套服务，主线程负责界面更新；Markdown 仅影响展示，原始回复仍完整存储。
 
 ## 上下文与限制
 
