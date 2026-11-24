@@ -4,15 +4,27 @@
 
 ## 桌面对话窗口（Windows）
 
-完成下面的环境和密钥配置后，双击项目中的 **启动助手.vbs**，即可打开独立窗口，
-无需启动 VS Code 或终端。也可运行 `venv\Scripts\pythonw.exe desktop.py`。
-启动器使用本项目的虚拟环境，不需要安装额外的 GUI 依赖（使用 Python 自带 Tkinter）。
+如果已构建桌面应用，双击 `dist\AI-Learning-Assistant\AI-Learning-Assistant.exe` 启动。
+应用自带 Python 和 Tkinter，无需安装 Python、打开 VS Code 或启动终端。
+从项目的 `dist/AI-Learning-Assistant/` 启动时会直接
+读取项目根目录的 `.env` 和 `data/`。
+
+也可以将整个 `AI-Learning-Assistant/` 文件夹复制到可写的位置单独使用。请保留 EXE
+旁边的 `_internal/` 运行时。如果要迁移，可以自行把原有的 `.env` 和 `data/` 放到新位置的 EXE
+旁边。构建产物不包含密钥、历史或外观偏好。
+运行时可通过环境变量 `AI_LEARNING_HOME` 指定另一个配置及数据目录。
+
+开发时仍可双击 **启动助手.vbs** 或运行 `venv\Scripts\pythonw.exe desktop.py`，
+这两种方式使用项目的虚拟环境。
 
 - 默认采用深色背景与蓝紫色点缀；侧边栏的“外观与个性化”支持深空、明亮、暖纸主题。
 - 可选择系统字体、10–20 号字号和自定义强调色，修改会实时预览；保存后下次启动沿用。
 - “取消”会恢复修改前的样式，“恢复默认”可以重置，再点击“保存”使其生效。
 - 外观独立保存在 `data/appearance.json`，会话继续复用原来的记忆文件。
-- 支持新建、切换、删除会话及只读查看长期记忆；删除前会询问。
+- 支持新建、切换和删除会话，删除前会询问。
+- 点击“长期记忆”，选中一条已有记忆，可修改内容和分类，再点击“保存修改”。
+  保存后会写入 `data/long_term_memory.json`，后续对话可使用修改后的记忆。
+- 可点击“删除”并确认，移除当前选中的长期记忆。
 - Enter 发送，Shift+Enter 换行，文字可选中后按 Ctrl+C 复制。
 - 请求在后台线程执行，等待时可以编辑下一条草稿或调整外观；为保证会话归属，
   本轮结束前暂时禁止切换/删除会话、发送和关闭窗口。
@@ -27,6 +39,17 @@
 
 如需离线预览，可运行 `venv\Scripts\python.exe test/desktop_preview.py`，
 该预览使用临时对话和模拟回答，不调用 API；与正式窗口共用外观设置。
+
+## 构建 Windows 应用
+
+在 Windows 上完成下文的虚拟环境和依赖安装后运行：
+
+```powershell
+.\venv\Scripts\python.exe -m pip install --target .build/packaging -r requirements-build.txt
+.\venv\Scripts\python.exe build_desktop.py
+```
+
+应用输出到 `dist/AI-Learning-Assistant/`。关闭旧版窗口再重新构建。
 
 ## 启动
 
@@ -63,6 +86,8 @@ Ctrl+C 或输入结束均可退出。
 ```text
 AI_Learning_Assistant/
 ├── 启动助手.vbs                 Windows 双击启动入口，不显示终端
+├── build_desktop.py             构建可独立运行的 Windows 可执行文件
+├── app_paths.py                 源码和打包模式下的配置及数据目录
 ├── desktop.py                   桌面窗口、会话操作与后台请求结果展示
 ├── appearance.py                主题、强调色、字体与字号的校验和保存
 ├── markdown_view.py             助手回复的轻量 Markdown 渲染
@@ -108,6 +133,7 @@ AI_Learning_Assistant/
 ├── .env                         本地密钥配置，不提交到版本库
 ├── .gitignore                   版本控制忽略规则
 ├── requirements.txt             Python 直接依赖版本
+├── requirements-build.txt       Windows 应用打包依赖
 ├── README.md                    项目说明与使用方法
 └── ROADMAP.md                   后续功能与实现路线
 ```

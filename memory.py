@@ -3,15 +3,11 @@ import os
 import tempfile
 import uuid
 from datetime import datetime
-from pathlib import Path
 
 from llm import ask_llm
+from app_paths import DATA_DIR
 
-# 获取当前项目目录
-BASE_DIR = Path(__file__).parent
-
-# 拼接完整目录
-MEMORY_FILE = BASE_DIR / "data" / "memory.json"
+MEMORY_FILE = DATA_DIR / "memory.json"
 
 # 会话标题的长度上限，防止模型不听话时把标题写太长
 MAX_TITLE_LENGTH = 24

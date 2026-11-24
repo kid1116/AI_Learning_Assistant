@@ -3,13 +3,11 @@ import os
 import tempfile
 import uuid
 from datetime import datetime
-from pathlib import Path
 
 from llm import ask_llm
+from app_paths import DATA_DIR
 
-BASE_DIR = Path(__file__).parent
-
-LONG_TERM_MEMORY_FILE = BASE_DIR / "data" / "long_term_memory.json"
+LONG_TERM_MEMORY_FILE = DATA_DIR / "long_term_memory.json"
 
 #extract_memories 允许的记忆分类
 ALLOWED_CATEGORIES = {
@@ -153,14 +151,45 @@ class LongTermMemory:
 
         return True
 
+    def update_memory(self, memory_id, content, category):
+        """按 ID 编辑已有记忆，保留其来源和创建时间。"""
+        content = content.strip()
+        if not content:
+            raise ValueError("记忆内容不能为空。")
+        if category not in ALLOWED_CATEGORIES:
+            raise ValueError("请选择有效的分类。")
+
+        memories = self.get_memories()
+        normalized = content.lower()
+        for index, memory in enumerate(memories):
+            if memory["id"] != memory_id:
+                continue
+            if memory["content"] == content and memory["category"] == category:
+                return
+            if any(other["id"] != memory_id and other["content"].strip().lower() == normalized
+                   for other in memories):
+                raise ValueError("已有另一条相同内容的记忆。")
+
+            memories[index] = {**memory, "content": content, "category": category, "updated_at": self.now()}
+            try:
+                self.save()
+            except Exception:
+                memories[index] = memory
+                raise
+            return
+        raise ValueError("这条记忆已不存在。")
+
     #删除记忆
     def delete_memory(self, memory_id):
-        for memory in self.data["memories"]:
+        memories = self.get_memories()
+        for index, memory in enumerate(memories):
             if memory["id"] == memory_id:
-                self.data["memories"].remove(memory)
-
-                self.save()
-
+                memories.pop(index)
+                try:
+                    self.save()
+                except Exception:
+                    memories.insert(index, memory)
+                    raise
                 return True
 
         return False

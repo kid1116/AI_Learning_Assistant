@@ -5,9 +5,10 @@ import tkinter as tk
 from tkinter import colorchooser, font, messagebox, ttk
 
 from appearance import DEFAULTS, PALETTES, accent_text, load_settings, save_settings
+from app_paths import DATA_DIR, ENV_FILE
 from chat import ChatService
 from config import MAX_USER_INPUT_CHARS
-from long_term_memory import LongTermMemory
+from long_term_memory import ALLOWED_CATEGORIES, LongTermMemory
 from memory import SessionMemory
 from markdown_view import MarkdownView
 
@@ -243,7 +244,7 @@ class ChatWindow:
                 kind, value = self.events.get_nowait()
                 self.set_busy(False)
                 if kind == "error" or value.answer is None:
-                    detail = value if kind == "error" else "模型服务不可用，请检查 .env 中的密钥、模型配置或网络。"
+                    detail = value if kind == "error" else f"模型服务不可用，请检查网络或配置文件：\n{ENV_FILE}"
                     self.render_history()
                     self.append("note", str(detail) + "\n本轮未保存，原问题已放回输入框。")
                     draft = self.composer.get("1.0", "end-1c")
@@ -264,15 +265,151 @@ class ChatWindow:
         if self.busy:
             return
         dialog = tk.Toplevel(self.root)
-        dialog.title("长期记忆 · 只读")
-        dialog.geometry("650x450")
+        dialog.title("长期记忆")
+        dialog.geometry("740x460")
+        dialog.minsize(560, 350)
+        dialog.transient(self.root)
         palette = PALETTES[self.settings["theme"]]
-        text = tk.Text(dialog, wrap="word", padx=20, pady=20, bg=palette["input"],
-                       fg=palette["text"], font=(self.settings["font"], self.settings["size"]))
-        text.pack(fill="both", expand=True)
+        accent = self.settings["accent"]
+        text_font = (self.settings["font"], self.settings["size"])
+        body = ttk.Frame(dialog, padding=16)
+        body.pack(fill="both", expand=True)
+        body.columnconfigure(1, weight=1)
+        body.rowconfigure(1, weight=1)
+        ttk.Label(body, text="选择一条记忆").grid(row=0, column=0, sticky="w", pady=(0, 8))
+        ttk.Label(body, text="记忆内容").grid(row=0, column=1, sticky="w", padx=(16, 0), pady=(0, 8))
+
+        sidebar = ttk.Frame(body)
+        sidebar.grid(row=1, column=0, sticky="nsew")
+        entries = tk.Listbox(sidebar, width=21, exportselection=False, font=text_font,
+                             bg=palette["input"], fg=palette["text"], selectbackground=accent,
+                             selectforeground=accent_text(accent), bd=0, highlightthickness=0)
+        entries.pack(side="left", fill="both", expand=True)
+        scrollbar = ttk.Scrollbar(sidebar, command=entries.yview)
+        scrollbar.pack(side="right", fill="y")
+        entries.configure(yscrollcommand=scrollbar.set)
+        text = tk.Text(body, width=1, height=1, wrap="word", padx=12, pady=10, undo=True,
+                       bg=palette["input"], fg=palette["text"], insertbackground=palette["text"],
+                       selectbackground=accent, selectforeground=accent_text(accent), font=text_font)
+        text.grid(row=1, column=1, sticky="nsew", padx=(16, 0))
+
+        controls = ttk.Frame(body)
+        controls.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(12, 0))
+        category = tk.StringVar(master=dialog)
+        status = tk.StringVar(master=dialog)
+        ttk.Label(controls, text="分类").pack(side="left")
+        picker = ttk.Combobox(controls, textvariable=category, values=sorted(ALLOWED_CATEGORIES),
+                              width=13, state="readonly")
+        picker.pack(side="left", padx=(8, 12))
+        ttk.Label(controls, textvariable=status).pack(side="left")
+
         items = self.memories.get_memories()
-        text.insert("1.0", "\n\n".join(f"[{item['category']}] {item['content']}" for item in items) or "暂无长期记忆。")
-        text.configure(state="disabled")
+        selected = None
+        baseline = ("", "")
+
+        def editor_values():
+            return text.get("1.0", "end-1c"), category.get()
+
+        def load_item(index):
+            nonlocal selected, baseline
+            selected = index
+            item = items[index]
+            baseline = item["content"], item["category"]
+            text.delete("1.0", "end")
+            text.insert("1.0", baseline[0])
+            text.edit_reset()
+            category.set(baseline[1])
+            status.set("")
+
+        def can_discard():
+            return selected is None or editor_values() == baseline or messagebox.askyesno(
+                "未保存的修改", "要放弃这次修改吗？", parent=dialog,
+            )
+
+        def on_select(event):
+            selection = entries.curselection()
+            if not selection or selection[0] == selected:
+                return
+            if can_discard():
+                load_item(selection[0])
+            else:
+                entries.selection_clear(0, "end")
+                entries.selection_set(selected)
+
+        def save():
+            if selected is None:
+                return
+            content, new_category = editor_values()
+            try:
+                self.memories.update_memory(items[selected]["id"], content, new_category)
+            except (OSError, ValueError) as error:
+                messagebox.showerror("保存失败", str(error), parent=dialog)
+                return
+            entries.delete(selected)
+            entries.insert(selected, " ".join(items[selected]["content"].split()))
+            entries.selection_set(selected)
+            entries.see(selected)
+            load_item(selected)
+            status.set("已保存")
+
+        def close():
+            if can_discard():
+                dialog.destroy()
+
+        def delete():
+            nonlocal selected, baseline
+            if selected is None or not can_discard():
+                return
+            item = items[selected]
+            preview = item["content"][:80].strip()
+            if not messagebox.askyesno("删除长期记忆", f"确定删除这条长期记忆吗？\n\n{preview}", parent=dialog):
+                return
+            try:
+                if not self.memories.delete_memory(item["id"]):
+                    raise ValueError("这条记忆已不存在。")
+            except (OSError, ValueError) as error:
+                messagebox.showerror("删除失败", str(error), parent=dialog)
+                return
+            entries.delete(selected)
+            if items:
+                index = min(selected, len(items) - 1)
+                entries.selection_clear(0, "end")
+                entries.selection_set(index)
+                entries.see(index)
+                load_item(index)
+                status.set("已删除")
+            else:
+                selected, baseline = None, ("", "")
+                set_empty_state()
+
+        ttk.Button(controls, text="关闭", command=close).pack(side="right")
+        save_button = ttk.Button(controls, text="保存修改", command=save)
+        save_button.pack(side="right", padx=8)
+        delete_button = ttk.Button(controls, text="删除", command=delete)
+        delete_button.pack(side="right")
+
+        def set_empty_state():
+            text.delete("1.0", "end")
+            text.edit_reset()
+            category.set("")
+            status.set("暂无长期记忆")
+            for widget in (text, picker, save_button, delete_button):
+                widget.configure(state="disabled")
+
+        entries.bind("<<ListboxSelect>>", on_select)
+        dialog.protocol("WM_DELETE_WINDOW", close)
+        for item in items:
+            entries.insert("end", " ".join(item["content"].split()))
+        if items:
+            entries.selection_set(0)
+            load_item(0)
+        else:
+            set_empty_state()
+
+        # 模态编辑避免后台对话与手动编辑同时写入同一份记忆。
+        dialog.wait_visibility()
+        dialog.grab_set()
+        text.focus_set()
 
     def open_appearance(self):
         if self.appearance_dialog and self.appearance_dialog.winfo_exists():
@@ -347,30 +484,26 @@ class ChatWindow:
 
 def main():
     # 同时打开多个桌面实例会覆盖 JSON；用操作系统文件锁阻止重复启动。
-    from pathlib import Path
     import msvcrt
     root = tk.Tk()
     root.withdraw()
     root.report_callback_exception = lambda kind, error, trace: messagebox.showerror("操作失败", str(error), parent=root)
-    lock_path = Path(__file__).resolve().parent / "data" / "desktop.lock"
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    lock = lock_path.open("a+b")
-    lock.seek(0)
     try:
-        msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
-    except OSError:
-        messagebox.showinfo("助手已打开", "已有桌面窗口正在运行，请在任务栏查找。", parent=root)
-        lock.close()
-        root.destroy()
-        return
-    try:
-        ChatWindow(root, SessionMemory(), LongTermMemory())
-        root.deiconify()
-        root.mainloop()
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with (DATA_DIR / "desktop.lock").open("a+b") as lock:
+            lock.seek(0)
+            try:
+                msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+            except OSError:
+                messagebox.showinfo("助手已打开", "已有桌面窗口正在运行，请在任务栏查找。", parent=root)
+                root.destroy()
+                return
+            ChatWindow(root, SessionMemory(), LongTermMemory())
+            root.deiconify()
+            root.mainloop()
     except Exception as error:
         messagebox.showerror("启动失败", str(error), parent=root)
-    finally:
-        lock.close()
+        root.destroy()
 
 
 if __name__ == "__main__":

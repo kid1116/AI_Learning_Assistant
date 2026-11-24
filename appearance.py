@@ -1,11 +1,11 @@
 """桌面外观配置，与对话记忆分开保存。"""
 import json
 import os
-from pathlib import Path
 import re
 import tempfile
+from app_paths import DATA_DIR
 
-SETTINGS_FILE = Path(__file__).resolve().parent / "data" / "appearance.json"
+SETTINGS_FILE = DATA_DIR / "appearance.json"
 DEFAULTS = {"theme": "深空", "accent": "#9B8AFF", "font": "Microsoft YaHei UI", "size": 12}
 PALETTES = {
     "深空": {"bg": "#11131D", "panel": "#191C2B", "input": "#22263A", "text": "#E8EAF5", "muted": "#A1A7BE"},

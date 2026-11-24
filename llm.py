@@ -1,11 +1,12 @@
 from functools import lru_cache
+from app_paths import ENV_FILE
 from config import API_KEY, BASE_URL, MODEL_NAME, LLM_TIMEOUT_SECONDS
 
 @lru_cache(maxsize=1)
 def get_client():
     """只在请求模型时初始化，离线功能和导入不要求密钥。"""
     if not API_KEY:
-        raise ValueError("DEEPSEEK_API_KEY 未配置，请检查项目目录下的 .env")
+        raise ValueError(f"DEEPSEEK_API_KEY 未配置，请检查 {ENV_FILE}")
     from openai import OpenAI
     return OpenAI(
         api_key=API_KEY, base_url=BASE_URL,

@@ -1,8 +1,8 @@
 import os
-from pathlib import Path
 from dotenv import load_dotenv
+from app_paths import ENV_FILE
 
-load_dotenv(Path(__file__).resolve().parent / ".env")
+load_dotenv(ENV_FILE)
 
 API_KEY = os.getenv("DEEPSEEK_API_KEY")
 
